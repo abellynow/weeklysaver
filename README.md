@@ -13,11 +13,11 @@ In order to use WeeklySaver atm you need to register for a Spotify Developer acc
 client_id=<your client_id>
 client_secret=<your client_secret>
 ```
-and put it in `~/.weeklysaver/`. Next you need a `refresh_token` (because WeeklySaver does not currently support creating one as it involves serving a HTTP server). Go through the Spotify Authentication sample to get it. You need to change the scope to `playlist-read-private` for WeeklySaver to work. Finally save the `refresh_token` you get from running the sample app (you can save the `access_token` as well). Put them in another file called `session`:
+and put it in `~/.weeklysaver/`. Next you need a `refresh_token` (and an `access_token`). Run `weeklysaver.py` with:
 ```
-refresh_token=<the refresh_token you got>
-access_token=<the access_token you got>
+$ ./weeklysaver.py --serve
 ```
+Which will serve a very basic web server at port `8888`. Optionally you can supply the `--port <portno>` if the default is not good for you. You need to whitelist `http://localhost:8888` in your Spotify Developer account for the project you have created earlier. Then go to `http://localhost:8888/` with you browser, click on the `Login to Spotify` link and follow the steps. If all goes well you should get a success page.
 Finally setup a cron job to run weeklysaver.py once (or twice) a week, e.g.:
 ```
 (crontab -l ; echo "* * * * 1,5 ~/bin/weeklysaver.py") | crontab -
