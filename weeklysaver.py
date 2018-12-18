@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import requests
 import logging
-import secrets
 import http.client
 import os
 import sys
@@ -142,7 +141,7 @@ class WeeklySaver(object):
     write_config(os.path.join(self.basedir, "config"), self.cfg)
     return self.cfg['playlist']
   def retrieve_weekly(self):
-    if self.cfg['playlist'] == None:
+    if not 'playlist' in self.cfg or self.cfg['playlist'] == None:
       self.get_weekly_id()
     expected_filename = get_playlist_filename_from_date(datetime.datetime.now(), is_early = False)
     print("We would expect to get {}".format(expected_filename))
