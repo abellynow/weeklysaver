@@ -143,7 +143,7 @@ class Spotify(object):
     return self._make_request("https://api.spotify.com/v1/playlists/{}/tracks".format(playlist))
 
 def get_playlist_filename_from_week_year(week, year = None, extra = None):
-  return "DW-{}_W{}{}.pl".format(year if year != None else datetime.datetime.now().year, week, "" if extra == None else "-{}".format(extra))
+  return "DW-{}_W{:02d}{}.pl".format(year if year != None else datetime.datetime.now().year, week, "" if extra == None else "-{}".format(extra))
 
 def get_playlist_filename_from_date(dt, is_early = True, extra = None):
   week_date = dt + datetime.timedelta(days = 1) if is_early and dt.weekday() == 6 else dt
@@ -221,13 +221,15 @@ class WeeklySaver(object):
     print("But we already have it, so let's not bother Spotify about it")
     return False
   def list_songs_for_week(self, weekno, year = None, extra = None):
-    pl_filename = get_playlist_filename_from_week_year(weekno, year, extra)
-    old_hash = hash_file(os.path.join(self.playlist_dir, pl_filename))
-    with open(os.path.join(self.playlist_dir, pl_filename), 'r') as plfile:
-      pjl = json.load(plfile)
-    for it in pjl['items']:
-      track = it['track']
-      print("{}/{}/{}".format(track['name'], ','.join([tn['name'] for tn in track['artists']]), track['album']['name']))
+    try:
+      pl_filename = get_playlist_filename_from_week_year(weekno, year, extra)
+      with open(os.path.join(self.playlist_dir, pl_filename), 'r') as plfile:
+        pjl = json.load(plfile)
+      for it in pjl['items']:
+        track = it['track']
+        print("{}/{}/{}".format(track['name'], ','.join([tn['name'] for tn in track['artists']]), track['album']['name']))
+    except FileNotFoundError:
+      print("No playlist found for week {:02d} ({})".format(weekno, year if year else get_this_year()))
   def serve(self, port):
     self.port = port
     self.handlers = {'/': self._index, '/login': self._login, '/callback': self._callback, '/favicon.ico': self._not_found, '/success': self._success, '/failure': self._failure}
