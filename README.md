@@ -20,6 +20,6 @@ $ ./weeklysaver.py --serve
 Which will serve a very basic web server at port `8888`. Optionally you can supply the `--port <portno>` if the default is not good for you. You need to whitelist `http://localhost:8888` in your Spotify Developer account for the project you have created earlier. Then go to `http://localhost:8888/` with you browser, click on the `Login to Spotify` link and follow the steps. If all goes well you should get a success page.
 Finally setup a cron job to run weeklysaver.py once (or twice) a week, e.g.:
 ```
-(crontab -l ; echo "* * * * 1,5 ~/bin/weeklysaver.py") | crontab -
+(crontab -l ; echo "43 8 * * 1,5 ~/bin/weeklysaver.py") | crontab -
 ```
 will run WeeklySaver each Monday and Saturday.

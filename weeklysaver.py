@@ -142,12 +142,12 @@ class Spotify(object):
   def get_playlist(self, playlist):
     return self._make_request("https://api.spotify.com/v1/playlists/{}/tracks".format(playlist))
 
-def get_playlist_filename_from_week_year(week, year = None):
-  return "DW-{}_W{}.pl".format(year if year != None else datetime.datetime.now().year, week)
+def get_playlist_filename_from_week_year(week, year = None, extra = None):
+  return "DW-{}_W{}{}.pl".format(year if year != None else datetime.datetime.now().year, week, "" if extra == None else "-{}".format(extra))
 
 def get_playlist_filename_from_date(dt, is_early = True, extra = None):
   week_date = dt + datetime.timedelta(days = 1) if is_early and dt.weekday() == 6 else dt
-  return "{}{}.pl".format(week_date.strftime("DW-%Y_W%W"), "" if extra == None else "-{}".format(extra))
+  return "{}{}.pl".format(week_date.strftime("DW-%Y_W%V"), "" if extra == None else "-{}".format(extra))
 
 def get_playlist_filename_from_date_str(dt, is_early = True, extra = None):
   added = datetime.datetime.strptime(dt[0:19], '%Y-%m-%dT%H:%M:%S')
@@ -157,7 +157,7 @@ def get_playlist_filename_from_json(plj, is_early = True, extra = None):
   return get_playlist_filename_from_date_str(plj['items'][0]['added_at'][0:19], is_early, extra)
 
 def get_this_week():
-  return datetime.datetime.now().strftime("%W")
+  return datetime.datetime.now().strftime("%V")
 
 def get_this_year():
   return datetime.datetime.now().strftime("%Y")
@@ -180,6 +180,16 @@ class WeeklySaver(object):
     self.cfg['playlist'] = self.sptfy.find_playlist("Discover Weekly")
     write_config(os.path.join(self.basedir, "config"), self.cfg)
     return self.cfg['playlist']
+  def hash_tracks_for_playlist(self, pjl):
+    sha1 = hashlib.sha1()
+    for it in pjl['items']:
+      track = it['track']
+      sha1.update(track['uri'].encode('utf-8'))
+    return sha1.digest()
+  def hash_tracks_for_playlist_file(self, plf):
+    with open(plf, 'r') as plfile:
+      pjl = json.load(plfile)
+    return self.hash_tracks_for_playlist(pjl)
   def retrieve_weekly(self):
     if not 'playlist' in self.cfg or self.cfg['playlist'] == None:
       self.get_weekly_id()
@@ -188,20 +198,21 @@ class WeeklySaver(object):
     if not os.path.exists(os.path.join(self.playlist_dir, expected_filename)):
       print("It seems like we don't have it, ask Spotify for it...")
       pl = self.sptfy.get_playlist(self.cfg['playlist'])
-      new_hash = hash_str(pl.encode('utf-8'))
-      new_name = get_playlist_filename_from_json(json.loads(pl))
+      pjl = json.loads(pl)
+      new_hash = self.hash_tracks_for_playlist(pjl)
+      new_name = get_playlist_filename_from_json(pjl)
       pl_filename = os.path.join(self.playlist_dir, new_name)
       if new_name != expected_filename:
         print("Hmm, seems like Spotify doesn't have it either...")
       print("Let's see if we already have what Spotify gave us...")
       count = 1
       while os.path.exists(pl_filename):
-        old_hash = hash_file(pl_filename)
+        old_hash = self.hash_tracks_for_playlist_file(pl_filename)
         if old_hash == new_hash:
           print("Same list different name!")
           return False
         # so, same name but different contents, we need a new name
-        pl_filename = os.path.join(self.playlist_dir, get_playlist_filename_from_json(json.loads(pl), extra = count))
+        pl_filename = os.path.join(self.playlist_dir, get_playlist_filename_from_json(pjl, extra = count))
         count += 1
       with open(pl_filename, 'wb') as plf:
         plf.write(pl.encode('utf-8'))
@@ -209,8 +220,9 @@ class WeeklySaver(object):
       return True
     print("But we already have it, so let's not bother Spotify about it")
     return False
-  def list_songs_for_week(self, weekno, year = None):
-    pl_filename = get_playlist_filename_from_week_year(weekno, year)
+  def list_songs_for_week(self, weekno, year = None, extra = None):
+    pl_filename = get_playlist_filename_from_week_year(weekno, year, extra)
+    old_hash = hash_file(os.path.join(self.playlist_dir, pl_filename))
     with open(os.path.join(self.playlist_dir, pl_filename), 'r') as plfile:
       pjl = json.load(plfile)
     for it in pjl['items']:
@@ -282,12 +294,13 @@ def main_prog():
   parser.add_argument('--show', action = 'store_true', default = False, help = 'show tracks for a week')
   parser.add_argument('-w', '--week', type = int, dest = 'week', default = None, help = 'week to show')
   parser.add_argument('-y', '--year', type = int, dest = 'year', default = None, help = 'year to show')
+  parser.add_argument('-e', '--extra', type = int, dest = 'extra', default = None, help = 'extra to show')
   args = parser.parse_args()
 
   basedir = os.path.join(os.path.expanduser("~"), ".weeklysaver")
   ws = WeeklySaver(basedir = basedir)
   if args.show:
-    ws.list_songs_for_week(args.week if args.week != None else get_this_week(), args.year if args.year != None else get_this_year())
+    ws.list_songs_for_week(args.week if args.week != None else get_this_week(), args.year if args.year != None else get_this_year(), args.extra)
   elif args.serve:
     ws.serve(args.port)
   else:
