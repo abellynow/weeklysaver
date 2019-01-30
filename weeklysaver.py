@@ -159,6 +159,9 @@ def get_playlist_filename_from_json(plj, is_early = True, extra = None):
 def get_this_week():
   return datetime.datetime.now().strftime("%W")
 
+def get_this_year():
+  return datetime.datetime.now().strftime("%Y")
+
 def get_config_or_default(cfg, name, default = None):
   try:
     v = cfg[name]
@@ -278,12 +281,13 @@ def main_prog():
   parser.add_argument('-p', '--port', type = int, dest = 'port', default = 8888, help = 'website port number')
   parser.add_argument('--show', action = 'store_true', default = False, help = 'show tracks for a week')
   parser.add_argument('-w', '--week', type = int, dest = 'week', default = None, help = 'week to show')
+  parser.add_argument('-y', '--year', type = int, dest = 'year', default = None, help = 'year to show')
   args = parser.parse_args()
 
   basedir = os.path.join(os.path.expanduser("~"), ".weeklysaver")
   ws = WeeklySaver(basedir = basedir)
   if args.show:
-    ws.list_songs_for_week(args.week if args.week != None else get_this_week())
+    ws.list_songs_for_week(args.week if args.week != None else get_this_week(), args.year if args.year != None else get_this_year())
   elif args.serve:
     ws.serve(args.port)
   else:
